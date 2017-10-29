@@ -1,0 +1,23 @@
+{
+  "scripts": {
+    "test": "tape test.js"
+  },
+  "dependencies": {
+    "freeport": "^1.0.5"
+  },
+  "devDependencies": {
+    "prettier-standard": "^7.0.3",
+    "tape": "^4.8.0"
+  },
+  "name": "zt-spawn",
+  "version": "0.1.0",
+  "description": "spawn a zerotier process",
+  "main": "index.js",
+  "repository": {
+    "url": "laduke/zt-spawn"
+  },
+  "keywords": [
+    "zerotier"
+  ],
+  "license": "MIT"
+}
