@@ -32,14 +32,14 @@ function spawner (opts, cb) {
   result.port = opts.port
   result.proc = proc
   result.token = ''
-  result.id = ''
+  result.address = ''
 
   waitFile(tokenPath, function (err, token) {
     if (err) console.error(err)
     result.token = token
     waitFile(idPath, function (err, identity) {
       if (err) console.error(err)
-      result.id = getAddress(identity)
+      result.address = getAddress(identity)
       cb(err, result)
     })
   })
@@ -53,7 +53,7 @@ function waitFile (path, cb, count) {
     if (err) {
       setTimeout(function () {
         waitFile(path, cb, count + 1)
-      }, 2)
+      }, 10)
     } else {
       cb(null, res)
     }

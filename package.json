@@ -3,10 +3,12 @@
     "test": "tape test.js"
   },
   "dependencies": {
-    "freeport": "^1.0.5"
+    "freeport": "^1.0.5",
+    "mkdirp": "^0.5.1"
   },
   "devDependencies": {
     "prettier-standard": "^7.0.3",
+    "rimraf": "^2.6.2",
     "tape": "^4.8.0"
   },
   "name": "zt-spawn",
