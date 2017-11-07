@@ -1,53 +1,45 @@
 var spawn = require('child_process').spawn
+var join = require('path').join
+var assert = require('assert')
 var fs = require('fs')
 
-var freeport = require('freeport')
-
 module.exports = function spawnController (opts, cb) {
-  if (!opts.port) {
-    freeport(function (err, port) {
-      if (err) throw err
-
-      opts.port = port
-
-      return spawner(opts, cb)
-    })
-  } else {
-    spawner(opts, cb)
-  }
+  spawner(opts, cb)
 }
 
 function spawner (opts, cb) {
-  var result = {}
-  if (!opts.home) opts.home = './tmp'
-  var idPath = opts.home + '/identity.public'
-  var tokenPath = opts.home + '/authtoken.secret'
+  assert(opts.ztBinary, 'need path to a zerotier-one binary in options arg')
+  assert(opts.home, 'need path to a str dir in options arg')
+  assert(opts.port, 'need port in options arg')
 
-  var proc = spawn(opts.ztBinary, ['-U', `-p${opts.port}`, opts.home], {
-    detached: false,
-    stdio: ['pipe', 'ipc', 'pipe'],
-    shell: false
-  })
+  var regex = new RegExp(`zerotier-one.*${opts.home}`)
+  matchRunningProcess(regex, function (_err, res) {
+    if (res) {
+      var e = new Error('ZeroTier one instance already running in working dir: ' + opts.home)
+      return cb(e)
+    }
 
-  result.port = opts.port
-  result.proc = proc
-  result.token = ''
-  result.address = ''
+    var proc = spawn(opts.ztBinary, ['-U', `-p${opts.port}`, opts.home], {
+      detached: false,
+      stdio: ['pipe', 'ipc', 'pipe'],
+      shell: false
+    })
 
-  waitFile(tokenPath, function (err, token) {
-    if (err) console.error(err)
-    result.token = token
-    waitFile(idPath, function (err, identity) {
-      if (err) console.error(err)
-      result.address = getAddress(identity)
-      cb(err, result)
+    waitFile(join(opts.home, 'zerotier-one.pid'), function (err, pid) {
+      if (err) return cb(err)
+
+      waitFile(join(opts.home, 'zerotier-one.port'), function (err, pid) {
+        if (err) return cb(err)
+
+        cb(null, proc)
+      })
     })
   })
 }
 
 function waitFile (path, cb, count) {
   if (!count) count = 0
-  if (count > 99) throw new Error('Tried too many times ' + path)
+  if (count > 500) throw new Error('Waited too long for file to appear ' + path)
 
   fs.readFile(path, { encoding: 'utf8' }, function (err, res) {
     if (err) {
@@ -60,6 +52,19 @@ function waitFile (path, cb, count) {
   })
 }
 
-function getAddress (str) {
-  return str.split(':')[0]
+function matchRunningProcess (regex, cb) {
+  var ps = spawn('ps', ['ax'])
+  var res = false
+
+  ps.stdout.on('data', data => {
+    var s = data.toString()
+    var found = s.match(regex)
+    if (found) {
+      res = true
+    }
+  })
+
+  ps.on('close', code => {
+    cb(null, res)
+  })
 }

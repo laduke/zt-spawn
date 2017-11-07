@@ -1,74 +1,85 @@
 var path = require('path')
 
 var test = require('tape')
-var rimraf = require('rimraf')
-
 var spawnController = require('./spawn')
 var generateController = require('./generate')
-
-var home = './tmp/'
+var readController = require('./read')
 
 var ztBinary = path.join(
-  '/',
-  'Library',
-  'Application Support',
-  'ZeroTier',
-  'One',
+  __dirname,
   'zerotier-one'
 )
+var baseDir = 'tmp'
 
-test('on specific port', function (t) {
-  t.plan(4)
-
-  var port = 19993
-  var opts = { ztBinary: ztBinary, port: port }
-
-  spawnController(opts, function (err, controller) {
-    if (err) throw err
-
-    controller.proc.kill()
-
-    t.ok(controller.token)
-    t.ok(controller.proc.pid)
-    t.equal(controller.port, 19993)
-    t.equal(controller.address.length, 10)
-  })
-})
-
-test('on random port', function (t) {
-  t.plan(4)
-
-  var opts = { ztBinary: ztBinary, home: home }
-
-  spawnController(opts, function (err, controller) {
-    if (err) throw err
-
-    controller.proc.kill()
-
-    t.ok(controller.port)
-    t.ok(controller.token)
-    t.ok(controller.proc.pid)
-    t.equal(controller.address.length, 10)
-  })
-})
-
-test('Generate controller home then spawn there', function (t) {
+test('Generate controller home', function (t) {
   t.plan(1)
 
-  var opts = { ztBinary: ztBinary }
+  var opts = { ztBinary: ztBinary, baseDir: baseDir }
 
-  generateController(opts, function (err, homeDir) {
+  generateController(opts, function (err, res) {
     if (err) throw err
-    spawnController(opts, callback)
+
+    t.equal(res.address.length, 10)
   })
+})
 
-  function callback (err, controller) {
+test('Generate then spawn', function (t) {
+  t.plan(1)
+
+  var opts = { ztBinary: ztBinary, baseDir: baseDir }
+
+  generateController(opts, function (err, res) {
     if (err) throw err
-    controller.proc.kill()
-    t.ok(controller.port)
 
-    rimraf(home + '/*', function (err, res) {
+    opts.home = res.home
+    opts.port = 19994
+    spawnController(opts, function (err, res) {
       if (err) throw err
+
+      res.kill()
+      t.ok(res.pid)
     })
-  }
+  })
+})
+
+test('Read controller home', function (t) {
+  t.plan(1)
+
+  var opts = { ztBinary: ztBinary, baseDir: baseDir }
+
+  generateController(opts, function (err, res) {
+    if (err) throw err
+
+    opts.home = res.home
+    readController(opts, function (err, res) {
+      if (err) throw err
+
+      t.ok(res.secret)
+    })
+  })
+})
+
+test('do not start multiple in same working dir', function (t) {
+  t.plan(2)
+
+  var opts = { ztBinary: ztBinary, baseDir: baseDir }
+
+  generateController(opts, function (err, controllerOpts) {
+    if (err) throw err
+
+    opts.home = controllerOpts.home
+    opts.port = 19995
+
+    spawnController(opts, function (err, res) {
+      if (err) throw err
+
+      t.notOk(err)
+
+      opts.port = 19996
+      spawnController(opts, function (err) {
+        res.kill()
+        t.ok(err)
+      })
+    })
+  })
 })
