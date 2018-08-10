@@ -7,10 +7,10 @@
   "devDependencies": {
     "standard": "^11.0.1"
   },
+  "main": "spawn.js",
   "name": "zt-spawn",
   "version": "0.1.0",
   "description": "spawn a zerotier process",
-  "main": "index.js",
   "repository": {
     "url": "laduke/zt-spawn"
   },
