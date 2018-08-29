@@ -14,7 +14,7 @@ var ztBinary = path.join(
 )
 
 var home = './tmp'
-var opts = { ztBinary: ztBinary, home: home }
+var opts = { ztBinary: ztBinary, home: home, <authToken> }
 
 spawnController(opts, function (err, controller) {
   if (err) throw err

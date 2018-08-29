@@ -1,6 +1,7 @@
 {
   "scripts": {},
   "dependencies": {
+    "mkdirp": "^0.5.1",
     "run-parallel": "^1.1.9",
     "run-series": "^1.1.8"
   },

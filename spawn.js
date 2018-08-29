@@ -3,6 +3,7 @@ var parallel = require('run-parallel')
 var series = require('run-series')
 var join = require('path').join
 var assert = require('assert')
+var mkdir = require('mkdirp')
 var http = require('http')
 var net = require('net')
 var fs = require('fs')
@@ -14,6 +15,16 @@ function spawner (opts, cb) {
   assert(opts.home, 'need path to home dir in options arg')
 
   parallel([
+    function (done) {
+      // provide your own authtoken.secret if you want
+      if (opts.authToken) {
+        mkdir.sync(opts.home)
+        fs.writeFileSync(join(opts.home, 'authtoken.secret'), opts.authToken)
+        done()
+      } else {
+        done()
+      }
+    },
     function (done) { checkPIDfile(opts.home, done) },
     function (done) {
       checkPortFile(opts.home, function (err, port) {
