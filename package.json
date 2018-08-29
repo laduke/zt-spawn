@@ -2,6 +2,7 @@
   "scripts": {},
   "dependencies": {
     "mkdirp": "^0.5.1",
+    "run-auto": "^2.0.3",
     "run-parallel": "^1.1.9",
     "run-series": "^1.1.8"
   },
@@ -18,5 +19,8 @@
   "keywords": [
     "zerotier"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "bin": {
+    "zt-spawn": "./bin.js"
+  }
 }

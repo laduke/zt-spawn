@@ -1,7 +1,6 @@
 var spawn = require('child_process').spawn
-var parallel = require('run-parallel')
-var series = require('run-series')
 var join = require('path').join
+var auto = require('run-auto')
 var assert = require('assert')
 var mkdir = require('mkdirp')
 var http = require('http')
@@ -14,81 +13,68 @@ function spawner (opts, cb) {
   assert(opts.ztBinary, 'need path to a zerotier-one binary in options arg')
   assert(opts.home, 'need path to home dir in options arg')
 
-  parallel([
-    function (done) {
-      // provide your own authtoken.secret if you want
-      if (opts.authToken) {
-        mkdir.sync(opts.home)
-        fs.writeFileSync(join(opts.home, 'authtoken.secret'), opts.authToken)
-        done()
-      } else {
-        done()
-      }
-    },
-    function (done) { checkPIDfile(opts.home, done) },
-    function (done) {
-      checkPortFile(opts.home, function (err, port) {
-        if (err) return done(null, { lastPort: null })
-        done(null, { lastPort: Number(port) })
-      })
-    },
-    function (done) {
-      getRandomPort(function (err, randomPort) {
-        if (err) throw (err)
+  var proc
 
-        done(null, { randomPort })
+  mkdir.sync(opts.home)
+
+  auto({
+    writeAuthToken: function (done) {
+      writeAuthToken(opts, done)
+    },
+    checkPID: function (done) {
+      checkPIDfile(opts.home, done)
+    },
+    previousPort: function (done) {
+      checkPortFile(opts.home, done)
+    },
+    randomPort: ['previousPort', function (results, done) {
+      if (!results.checkPort) {
+        getRandomPort(done)
+      } else done()
+    }],
+    port: ['previousPort', 'randomPort', function (results, done) {
+      done(null, results.previousPort || results.randomPort)
+    }],
+    spawn: ['port', function (results, done) {
+      proc = spawn(opts.ztBinary, ['-U', `-p${results.port}`, opts.home], {
+        detached: false,
+        shell: false
       })
-    }
-  ],
-  function (err, res) {
+
+      done(null, proc)
+    }],
+    waitForService: ['spawn', function (results, done) {
+      waitForHttp(results.port, function (err) {
+        done(err)
+      })
+    }],
+    controllerId: ['waitForService', function (results, done) {
+      getControllerId(opts.home, function (err, controllerId) {
+        done(err, controllerId)
+      })
+    }],
+    authToken: ['waitForService', function (results, done) {
+      getAuthToken(opts.home, function (err, authToken) {
+        done(err, authToken)
+      })
+    }]
+  }, function (err, results) {
     if (err) throw (err)
 
-    var props = smoosh(res)
-    var port = props.lastPort || props.randomPort
+    cb(null, results)
+  })
 
-    var proc
+  process.on('uncaughtException', function (e) {
+    console.error(e)
+    proc.kill()
+    process.exit(1)
+  })
 
-    series([
-      function (done) {
-        proc = spawn(opts.ztBinary, ['-U', `-p${port}`, opts.home], {
-          detached: false,
-          shell: false
-        })
-        done(null, { proc })
-      },
-      function (done) {
-        waitForHttp(port, function (err) {
-          done(err, { port })
-        })
-      },
-      function (done) {
-        getControllerId(opts.home, function (err, controllerId) {
-          done(err, { controllerId })
-        })
-      },
-      function (done) {
-        getAuthToken(opts.home, function (err, authToken) {
-          done(err, { authToken })
-        })
-      }
-    ], function (err, res) {
-      if (err) throw (err)
-
-      cb(null, smoosh(res))
-    })
-
-    process.on('uncaughtException', function (e) {
-      console.error(e)
-      proc.kill()
-      process.exit(1)
-    })
-
-    process.once('SIGUSR2', function () {
-      // helps nodemon
-      proc.kill()
-      proc.on('close', function () {
-        process.kill(process.pid, 'SIGUSR2')
-      })
+  process.once('SIGUSR2', function () {
+    // helps nodemon
+    proc.kill()
+    proc.on('close', function () {
+      process.kill(process.pid, 'SIGUSR2')
     })
   })
 }
@@ -167,8 +153,10 @@ function getAuthToken (home, cb) {
   })
 }
 
-function smoosh (arr) {
-  return arr.reduce(function (acc, el) {
-    return Object.assign({}, acc, el)
-  })
+function writeAuthToken (opts, cb) {
+  if (opts.authToken) {
+    fs.writeFile(join(opts.home, 'authtoken.secret'), opts.authToken, cb)
+  } else {
+    cb()
+  }
 }
