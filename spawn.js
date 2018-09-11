@@ -48,9 +48,9 @@ function spawner (opts, cb) {
         done(err)
       })
     }],
-    controllerId: ['waitForService', function (results, done) {
-      getControllerId(opts.home, function (err, controllerId) {
-        done(err, controllerId)
+    nodeId: ['waitForService', function (results, done) {
+      getControllerId(opts.home, function (err, nodeId) {
+        done(err, nodeId)
       })
     }],
     authToken: ['waitForService', function (results, done) {
@@ -61,7 +61,9 @@ function spawner (opts, cb) {
   }, function (err, results) {
     if (err) throw (err)
 
-    cb(null, results)
+    var { port, nodeId, authToken, spawn: childProcess } = results
+
+    cb(null, { port, nodeId, authToken, childProcess })
   })
 
   process.on('uncaughtException', function (e) {
