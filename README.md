@@ -4,7 +4,7 @@ Then you can talk to it's [json api](https://github.com/zerotier/ZeroTierOne/tre
 ```javascript
 var path = require('path')
 var spawnController = require('./index')
-var ztBinary = path.join(
+var execPath = path.join(
   '/',
   'Library',
   'Application Support',
@@ -14,7 +14,7 @@ var ztBinary = path.join(
 )
 
 var home = './tmp'
-var opts = { ztBinary: ztBinary, home: home, <authToken> }
+var opts = { execPath: execPath, home: home, <authToken> }
 
 spawnController(opts, function (err, controller) {
   if (err) throw err

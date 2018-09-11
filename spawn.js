@@ -10,7 +10,7 @@ var fs = require('fs')
 module.exports = spawner
 
 function spawner (opts, cb) {
-  assert(opts.ztBinary, 'need path to a zerotier-one binary in options arg')
+  assert(opts.execPath, 'need path to a zerotier-one binary in options arg')
   assert(opts.home, 'need path to home dir in options arg')
 
   var proc
@@ -36,7 +36,7 @@ function spawner (opts, cb) {
       done(null, results.previousPort || results.randomPort)
     }],
     spawn: ['port', function (results, done) {
-      proc = spawn(opts.ztBinary, ['-U', `-p${results.port}`, opts.home], {
+      proc = spawn(opts.execPath, ['-U', `-p${results.port}`, opts.home], {
         detached: false,
         shell: false
       })
